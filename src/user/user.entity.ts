@@ -83,6 +83,9 @@ export class User {
   @Column({ default: false })
   isVerifiedSeller: boolean;
 
+  @Column({ nullable: true })
+  profilePicture: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

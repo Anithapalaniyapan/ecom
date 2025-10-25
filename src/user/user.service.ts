@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import * as fs from 'fs';
+import * as path from 'path';
 import { User, UserRole } from './user.entity';
 import { CreateUserDto, UpdateUserDto, LoginDto, ChangePasswordDto, SellerVerificationDto } from './dto/user.dto';
 
@@ -185,5 +187,46 @@ export class UserService {
         totalRevenue: 0,   // Would be calculated from orders table
       }
     };
+  }
+
+  async uploadProfilePicture(userId: string, file: Express.Multer.File): Promise<User> {
+    const user = await this.findById(userId);
+
+    // Create uploads/profile-pictures directory if it doesn't exist
+    const uploadPath = path.join(process.cwd(), 'uploads', 'profile-pictures');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+
+    // Generate unique filename
+    const fileExtension = path.extname(file.originalname);
+    const fileName = `${userId}-${Date.now()}${fileExtension}`;
+    const filePath = path.join(uploadPath, fileName);
+
+    // Delete old profile picture if exists
+    if (user.profilePicture) {
+      // Handle both old format (uploads/profile-pictures/file.jpg) and new format (profile-pictures/file.jpg)
+      const oldPath = user.profilePicture.startsWith('uploads/')
+        ? user.profilePicture
+        : `uploads/${user.profilePicture}`;
+      const oldFilePath = path.join(process.cwd(), oldPath);
+      if (fs.existsSync(oldFilePath)) {
+        try {
+          fs.unlinkSync(oldFilePath);
+        } catch (error) {
+          // Log error but don't fail the upload if old file deletion fails
+          console.error('Error deleting old profile picture:', error);
+        }
+      }
+    }
+
+    // Save the file
+    fs.writeFileSync(filePath, file.buffer);
+
+    // Store path relative to uploads directory (this will be accessible at /uploads/profile-pictures/filename)
+    const relativePath = `profile-pictures/${fileName}`;
+    user.profilePicture = relativePath;
+    
+    return this.userRepository.save(user);
   }
 }

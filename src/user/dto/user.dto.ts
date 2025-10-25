@@ -104,6 +104,11 @@ export class UpdateUserDto {
   @IsString()
   firstName?: string;
 
+  @ApiPropertyOptional({ description: 'Profile picture URL or base64 data' })
+  @IsOptional()
+  @IsString()
+  profilePicture?: string;
+
   @ApiPropertyOptional({ example: 'Doe', description: 'User last name' })
   @IsOptional()
   @IsString()
