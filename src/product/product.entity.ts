@@ -9,6 +9,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Category } from '../category/category.entity';
+import { User } from '../user/user.entity';
 import { Cart } from '../cart/cart.entity';
 import { Review } from '../review/review.entity';
 import { Wishlist } from '../wishlist/wishlist.entity';
@@ -114,6 +115,14 @@ export class Product {
 
   @Column()
   categoryId: string;
+
+  // Seller relation
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'sellerId' })
+  seller: User;
+
+  @Column({ nullable: true })
+  sellerId: string;
 
   @OneToMany(() => Cart, (cart) => cart.product)
   carts: Cart[];

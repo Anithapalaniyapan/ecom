@@ -1,4 +1,5 @@
 import { IsString, IsNumber, IsOptional, IsEnum, IsArray, IsBoolean, IsUUID, Min, Max } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ProductStatus } from '../product.entity';
 
 export class CreateProductDto {
@@ -9,15 +10,18 @@ export class CreateProductDto {
   @IsString()
   description?: string;
 
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   price: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   originalPrice?: number;
 
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   stockQuantity: number;
@@ -100,16 +104,19 @@ export class UpdateProductDto {
   description?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   price?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   originalPrice?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   stockQuantity?: number;
@@ -197,11 +204,13 @@ export class ProductFilterDto {
   brand?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   minPrice?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   maxPrice?: number;
@@ -215,6 +224,7 @@ export class ProductFilterDto {
   color?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(1)
   @Max(5)
@@ -241,11 +251,13 @@ export class ProductFilterDto {
   sortOrder?: 'ASC' | 'DESC';
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(1)
   page?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(1)
   @Max(100)

@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, Between, In } from 'typeorm';
 import { Product } from './product.entity';
@@ -11,9 +13,38 @@ export class ProductService {
     private productRepository: Repository<Product>,
   ) {}
 
-  async create(createProductDto: CreateProductDto): Promise<Product> {
-    const product = this.productRepository.create(createProductDto);
-    return this.productRepository.save(product);
+  async create(createProductDto: CreateProductDto, files?: Express.Multer.File[], sellerId?: string): Promise<Product> {
+    const images: string[] = [];
+
+    // Save uploaded images if provided
+    if (files && files.length > 0) {
+      const uploadPath = path.join(process.cwd(), 'uploads', 'products');
+      if (!fs.existsSync(uploadPath)) {
+        fs.mkdirSync(uploadPath, { recursive: true });
+      }
+
+      for (const file of files) {
+        const extension = path.extname(file.originalname);
+        const safeBase = path.basename(file.originalname, extension).replace(/[^a-zA-Z0-9-_]/g, '');
+        const fileName = `${safeBase}-${Date.now()}${extension}`;
+        const filePath = path.join(uploadPath, fileName);
+        fs.writeFileSync(filePath, file.buffer);
+        images.push(`products/${fileName}`); // relative to /uploads
+      }
+    }
+
+    const mergedDto: CreateProductDto & { sellerId?: string } = {
+      ...createProductDto,
+      images: [...(createProductDto.images || []), ...images],
+      // sellerId will be assigned on entity below
+    };
+
+    const product = this.productRepository.create(mergedDto as any) as unknown as Product;
+    if (sellerId) {
+      (product as any).sellerId = sellerId;
+    }
+    const saved = await this.productRepository.save(product as any);
+    return saved as Product;
   }
 
   async findAll(filterDto: ProductFilterDto = {}): Promise<{ products: Product[]; total: number }> {
@@ -133,6 +164,14 @@ export class ProductService {
     });
   }
 
+  async findBySeller(sellerId: string): Promise<Product[]> {
+    return this.productRepository.find({
+      where: { sellerId, isActive: true },
+      relations: ['category'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   async findFeatured(): Promise<Product[]> {
     return this.productRepository.find({
       where: { isFeatured: true, isActive: true },
@@ -182,8 +221,36 @@ export class ProductService {
   }
 
   async delete(id: string): Promise<void> {
-    const product = await this.findById(id);
-    await this.productRepository.remove(product);
+    const product = await this.productRepository.findOne({ where: { id } });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+    // Soft-delete to avoid FK constraint issues with carts, wishlists, orders, reviews
+    product.isActive = false;
+    await this.productRepository.save(product);
+
+    // Optionally remove image files from disk (kept safe even if missing)
+    if (product.images && product.images.length > 0) {
+      const base = path.join(process.cwd(), 'uploads');
+      for (const rel of product.images) {
+        const fp = path.join(base, rel);
+        if (fs.existsSync(fp)) {
+          try { fs.unlinkSync(fp); } catch {}
+        }
+      }
+      product.images = [] as any;
+      await this.productRepository.save(product);
+    }
+  }
+
+  async deleteBySeller(sellerId: string): Promise<void> {
+    // Soft-delete all products owned by seller
+    await this.productRepository.update({ sellerId } as any, { isActive: false } as any);
+  }
+
+  async deleteAll(): Promise<void> {
+    // Admin: soft-delete all
+    await this.productRepository.update({} as any, { isActive: false } as any);
   }
 
   async updateRating(id: string): Promise<void> {

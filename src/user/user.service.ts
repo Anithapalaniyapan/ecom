@@ -33,21 +33,7 @@ export class UserService {
       if (!createUserDto.phoneNumber) {
         throw new BadRequestException('Phone number is required for sellers');
       }
-      if (!createUserDto.address) {
-        throw new BadRequestException('Address is required for sellers');
-      }
-      if (!createUserDto.city) {
-        throw new BadRequestException('City is required for sellers');
-      }
-      if (!createUserDto.state) {
-        throw new BadRequestException('State is required for sellers');
-      }
-      if (!createUserDto.zipCode) {
-        throw new BadRequestException('Zip code is required for sellers');
-      }
-      if (!createUserDto.country) {
-        throw new BadRequestException('Country is required for sellers');
-      }
+      // Address details are optional during signup; sellers can complete them later in profile
     }
 
     const hashedPassword = await bcrypt.hash(createUserDto.password, 12);
